@@ -1,82 +1,118 @@
+import Button from '@material-tailwind/react/Button'
+import Icon from '@material-tailwind/react/Icon'
 import Head from 'next/head'
-
+import Header from '../components/Header'
+import Image from 'next/image'
+import { useEffect, useState } from 'react'
+import Modal from '@material-tailwind/react/Modal'
+import ModalBody from '@material-tailwind/react/ModalBody'
+import ModalFooter from '@material-tailwind/react/ModalFooter'
+import {db} from "../firebase"
+import firebase from "firebase"
+import DocumentRow from '../components/DocumentRow'
 export default function Home() {
+  const [showModal,setShowModal] = useState(false);
+  const [input,setInput] = useState("")
+  const [documents,setDocuments] = useState([])
+  useEffect(()=>{
+    db.collection("userDocs").doc("MERNBros").collection("docs").orderBy("timestamp","desc").onSnapshot(snapshot=>(
+        setDocuments(snapshot.docs.map(doc=>({id:doc.id,data:doc.data()})))
+    ))
+},[])
+  const createDocument=()=>{
+      if(!input) return;
+      db.collection("userDocs")
+      .doc("MERNBros")
+      .collection("docs")
+      .add({
+        fileName:input,
+        timestamp:firebase.firestore.FieldValue.serverTimestamp()
+      })
+      setInput("")
+      setShowModal(false)
+  }
+
+  const modal=(
+    <Modal size="sm" active={showModal} toggler={()=>setShowModal(false)}>
+        <ModalBody>
+            <input 
+              type="text" 
+              value={input} 
+              onChange={(e)=>setInput(e.target.value)} className="outline-none w-full" 
+              placeholder="Enter the name of document..."
+              onKeyDown={(e)=>e.key==="Enter" && createDocument()}
+             />
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            color="blue"
+            buttonType="link"
+            onClick={(e)=>setShowModal(false)}
+            ripple="dark"
+          >
+            Cancel
+          </Button>
+          <Button
+            color="blue"
+            onClick={createDocument}
+            ripple="light">
+              Create
+            </Button>
+        </ModalFooter>
+    </Modal>
+  )
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2">
+    <div>
       <Head>
-        <title>Create Next App</title>
+        <title>Google DOC</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
-      <main className="flex flex-col items-center justify-center w-full flex-1 px-20 text-center">
-        <h1 className="text-6xl font-bold">
-          Welcome to{' '}
-          <a className="text-blue-600" href="https://nextjs.org">
-            Next.js!
-          </a>
-        </h1>
-
-        <p className="mt-3 text-2xl">
-          Get started by editing{' '}
-          <code className="p-3 font-mono text-lg bg-gray-100 rounded-md">
-            pages/index.js
-          </code>
-        </p>
-
-        <div className="flex flex-wrap items-center justify-around max-w-4xl mt-6 sm:w-full">
-          <a
-            href="https://nextjs.org/docs"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Documentation &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Find in-depth information about Next.js features and API.
-            </p>
-          </a>
-
-          <a
-            href="https://nextjs.org/learn"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Learn &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Learn about Next.js in an interactive course with quizzes!
-            </p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Examples &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Discover and deploy boilerplate example Next.js projects.
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className="p-6 mt-6 text-left border w-96 rounded-xl hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Deploy &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+      
+      <Header />
+      {modal}
+      <section className="bg-[#F8F9FA] pb-10 px-10">
+        <div className="max-w-3xl mx-auto">
+            <div className="flex items-center justify-between py-6">
+                <h2 className="text-gray-700 text-lg">Start a new document</h2>
+                <Button
+                  color="gray"
+                  buttonType="outline"
+                  iconOnly={true}
+                  ripple="dark"
+                  className="border-0"
+                >
+                  <Icon name="more_vert" size="3xl" />
+                </Button>
+            </div>
+            <div>
+                <div onClick={()=>setShowModal(true)} className="relative h-52 w-40 border-2 cursor-pointer hover:border-blue-700">
+                <Image src="https://links.papareact.com/pju" layout="fill" />
+                </div>
+              
+              <p className="ml-2 mt-2 font-semibold text-sm text-gray-700">Blank</p>
+            </div>
         </div>
-      </main>
+      </section>
+      <section className="bg-white px-10 md:px-0">
+        <div className="max-w-3xl mx-auto py-8 text-sm text-gray-700">
+          <div className="flex items-center justify-between pb-5">
+            <h2 className="font-medium flex-grow">My Documents</h2>
+            <p className="mr-12">Date Created</p>
+            <Icon name="folder" size="3xl" color="gray" />
+          
+        </div>
+        {documents?.map(doc =>(
+          <DocumentRow
+            key={doc.id}
+            id={doc.id}
+            fileName={doc.data.fileName}
+            date={doc.data.timestamp}
+          />
+        ))}
+        </div>
+      </section>
 
-      <footer className="flex items-center justify-center w-full h-24 border-t">
-        <a
-          className="flex items-center justify-center"
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className="h-4 ml-2" />
-        </a>
-      </footer>
     </div>
   )
 }
+
